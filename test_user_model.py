@@ -7,6 +7,7 @@
 
 import os
 from unittest import TestCase
+from sqlalchemy import exc
 
 from models import db, User, Message, Follows
 
@@ -15,7 +16,7 @@ from models import db, User, Message, Follows
 # before we import our app, since that will have already
 # connected to the database
 
-os.environ["DATABASE_URL"] = "postgresql:///warbler-test"
+os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
 
 
 # Now we can import app
@@ -63,10 +64,15 @@ class UserModelTestCase(TestCase):
         db.session.rollback()
         return res
 
+
     def test_user_model(self):
         """Does basic model work?"""
 
-        u = User(email="test@test.com", username="testuser", password="HASHED_PASSWORD")
+        u = User(
+            email="test@test.com",
+            username="testuser",
+            password="HASHED_PASSWORD"
+        )
 
         db.session.add(u)
         db.session.commit()
@@ -75,15 +81,17 @@ class UserModelTestCase(TestCase):
         self.assertEqual(len(u.messages), 0)
         self.assertEqual(len(u.followers), 0)
 
-    # Following Tests #
-
+    ####
+    #
+    # Following tests
+    #
+    ####
     def test_user_follows(self):
         self.u1.following.append(self.u2)
         db.session.commit()
 
         self.assertEqual(len(self.u2.following), 0)
         self.assertEqual(len(self.u2.followers), 1)
-
         self.assertEqual(len(self.u1.followers), 0)
         self.assertEqual(len(self.u1.following), 1)
 
@@ -95,30 +103,31 @@ class UserModelTestCase(TestCase):
         db.session.commit()
 
         self.assertTrue(self.u1.is_following(self.u2))
-        self.assertFalse(self.u2.following(self.u1))
+        self.assertFalse(self.u2.is_following(self.u1))
 
     def test_is_followed_by(self):
         self.u1.following.append(self.u2)
-        db.sessio.commit()
+        db.session.commit()
 
         self.assertTrue(self.u2.is_followed_by(self.u1))
         self.assertFalse(self.u1.is_followed_by(self.u2))
 
-    # Signup Tests #
+    ####
+    #
+    # Signup Tests
+    #
+    ####
     def test_valid_signup(self):
-        u_test = User.signup("test", "test@test.com", "password", None)
+        u_test = User.signup("testtesttest", "testtest@test.com", "password", None)
         uid = 99999
         u_test.id = uid
         db.session.commit()
 
         u_test = User.query.get(uid)
-
         self.assertIsNotNone(u_test)
         self.assertEqual(u_test.username, "testtesttest")
-        self.assertEqual(u_test.email, "test@test.com")
-        self.assertNotEqual
-        (u_test.password, "password")
-
+        self.assertEqual(u_test.email, "testtest@test.com")
+        self.assertNotEqual(u_test.password, "password")
         # Bcrypt strings should start with $2b$
         self.assertTrue(u_test.password.startswith("$2b$"))
 
@@ -126,24 +135,28 @@ class UserModelTestCase(TestCase):
         invalid = User.signup(None, "test@test.com", "password", None)
         uid = 123456789
         invalid.id = uid
-        with self.assertRaises(exc.IntegrityError)as context:
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+
+    def test_invalid_email_signup(self):
+        invalid = User.signup("testtest", None, "password", None)
+        uid = 123789
+        invalid.id = uid
+        with self.assertRaises(exc.IntegrityError) as context:
             db.session.commit()
     
-    def test_invalid_email_signup(self):
-        invalid = User.signup("test", None, "password", None)
-
-        uid = 123456
-        invalid.id = uid with self.assertRaises(exc.IntegrityError) as context:
-            db.session.commit()
-
     def test_invalid_password_signup(self):
         with self.assertRaises(ValueError) as context:
-            User.signup("test", "email@email.com", "", None)
-
+            User.signup("testtest", "email@email.com", "", None)
+        
         with self.assertRaises(ValueError) as context:
             User.signup("testtest", "email@email.com", None, None)
-    ## Authenticatio Tests ##
-
+    
+    ####
+    #
+    # Authentication Tests
+    #
+    ####
     def test_valid_authentication(self):
         u = User.authenticate(self.u1.username, "password")
         self.assertIsNotNone(u)
@@ -153,4 +166,15 @@ class UserModelTestCase(TestCase):
         self.assertFalse(User.authenticate("badusername", "password"))
 
     def test_wrong_password(self):
-        self.assertFalse(User.autheticate(self.u1.username, "badpassword"))
+        self.assertFalse(User.authenticate(self.u1.username, "badpassword"))
+
+
+
+
+        
+
+
+
+
+        
+
